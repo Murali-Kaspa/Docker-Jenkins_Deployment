@@ -1,0 +1,103 @@
+Deploying Docker Image from Jenkins : 
+
+In this project, I have deployed a Docker image from the Jenkins server by using two methods:
+
+1. Using Linux Commands
+2. Using the Docker Pipeline Plugin
+
+The Docker image is created and stored in Docker Hub under the name: muralikaspa1998:one.
+
+If you want to use Docker from the server, you first need to install Docker on the server and add the Jenkins user to the Docker group. 
+Even when using the Docker plugin from Jenkins, Docker needs to be installed on the Jenkins master server. 
+
+However, if you're using Jenkins nodes, Docker installation on the nodes is not required.
+
+To add Jenkins to the Docker group:
+
+sudo usermod -aG docker jenkins
+
+
+Method 1: Deploying Using Linux Commands
+
+You can deploy the image by creating a pipeline in Jenkins that runs commands on the server.
+
+pipeline {
+    agent any
+
+    stages {
+        stage('Docker pulling image') {
+            steps {
+                sh '''
+                docker pull muralikaspa1998/website:one
+                docker run -d -p 80:80 muralikaspa1998/website:one
+                '''
+            }
+        }
+    }
+}
+
+This script pulls the image from Docker Hub and runs it on port 80. You can access the application at https://<public-ip>:80.
+
+
+Method 2: Deploying Using Docker Plugin
+
+To deploy the application using the Docker plugin, follow these steps:
+
+Install the Docker Pipeline plugin in Jenkins:
+
+Go to Manage Jenkins → Plugin Manager → Available.
+Search for "Docker Pipeline" and install it.
+
+After installation, create a pipeline using the following script:
+
+pipeline {
+    agent any
+    
+    stages {
+        stage('Run Container') {
+            steps {
+                script {
+                    docker.image('muralikaspa1998/website:one').run('-p 80:80 --name my-website')
+                }
+            }
+        }
+    }
+}
+
+
+Lessons Learned:
+Docker Plugin Behavior:
+
+When you deploy using the Docker plugin, the container runs within the Jenkins environment.
+Volumes and networks associated with the container are automatically removed once the execution completes.
+Once the pipeline is done, the container is removed automatically.
+The container is not exposed to the internet unless configured explicitly.
+This method is best suited for short-lived tasks that do not require external exposure or persistence (e.g., testing or CI pipelines).
+
+Manual Docker Run:
+When you run the container manually using Docker commands, the container is persistent and runs outside the Jenkins environment.
+It can be exposed to the internet (e.g., through port mapping), allowing external users to access it.
+This method is ideal for long-running applications (e.g., web servers) that require internet exposure or persistence across Jenkins runs.
+
+
+PIPELINE For Docker-Plugin Script: the container runs within the Jenkins environment and removed it's volumes automatically once execution complets.
+
+pipeline {
+    agent {
+        docker { image 'muralikaspa1998/website:one' }
+    }
+    
+    stages {
+        stage('Run Container') {
+            steps {
+                echo 'Docker container is running inside Jenkins'
+            }
+        }
+    }
+}
+
+
+
+Conclusion:
+Docker Plugin: Best for temporary tasks or testing, where external exposure is not necessary.
+Manual Docker Run: Best for persistent applications that need to be exposed to the internet.
